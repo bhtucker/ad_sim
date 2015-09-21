@@ -11,7 +11,11 @@ import requests
 import time
 import uuid
 import numpy as np
-
+import logging
+logger = logging.getLogger()
+handler = logging.FileHandler('preferences.log')
+logger.addHandler(handler)
+logger.setLevel(10)
 N_BRANDS = 6
 
 
@@ -38,7 +42,7 @@ def _get_population_brand_prefs(n_users):
 
 def _get_brand_patterns():
     """
-    Define each brand's product mix (via params to a normal dist)
+    Define each brand's product mix (in terms of params to a normal dist)
     """
     return [
         (np.random.uniform(100, 800), np.random.exponential(10))
@@ -50,10 +54,7 @@ def _draw_user_brand_interest(user_prefs, brand_patterns):
     """
     Draw a brand based on user preference and a product based on brand params
     """
-    try:
-        brand_draw = np.random.multinomial(1, user_prefs)
-    except:
-        import pdb; pdb.set_trace()
+    brand_draw = np.random.multinomial(1, user_prefs)
     brand_index = brand_draw.argmax()
 
     product_price = np.random.normal(*brand_patterns[brand_index])
@@ -70,9 +71,10 @@ def _receive_ad(population_prefs, user_id, brand_index):
     if np.random.uniform(0, 1) > (N_BRANDS / 2.) * prefs[brand_index]:
         prefs[brand_index] += .1
     else:
-        prefs[brand_index] = prefs[brand_index] - .1 if prefs[brand_index] > .1 else 0.
+        prefs[brand_index] = prefs[brand_index] - .1 if prefs[brand_index] > .1 else 0.001
 
     population_prefs[user_id] = prefs * (1. / sum(prefs))
+    logger.info(population_prefs[user_id])
     return population_prefs
 
 
@@ -81,6 +83,7 @@ def _consider_purchase(product_viewed, population_prefs, user_id):
     User considers ending activity via purchase or bailing entirely
     """
     sd = np.std(population_prefs[user_id])
+    logger.info(str(product_viewed.items()) + str(population_prefs[user_id]))
     if sd < .05:
         # low variance in prefs, nothing compelling here, bail
         del population_prefs[user_id]
@@ -120,7 +123,7 @@ def main():
     user_ids = population_prefs.keys()
     time_ = 0
 
-    while len(population_prefs) > n_users / 100.:
+    while len(population_prefs) > n_users / 10.:
         time_ += 1
         user_idx = np.random.randint(len(population_prefs))
         user_id = user_ids[user_idx]
@@ -128,13 +131,15 @@ def main():
         product_viewed = _draw_user_brand_interest(user_prefs, brand_patterns)
         population_prefs, event = _experience_product(
             product_viewed, user_id, receiver_url, time_, population_prefs)
+
         if np.random.uniform(0, 1) > .9:
+            import pdb; pdb.set_trace()
             population_prefs, purchase = _consider_purchase(
                 product_viewed, population_prefs, user_id)
             if purchase:
                 _register_purchase(event, receiver_url)
             user_ids = population_prefs.keys()
-
+        logger.info(len(user_ids))
 
 if __name__ == '__main__':
     main()
