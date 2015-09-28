@@ -4,10 +4,27 @@
     ~~~~~~~~~~~~~~
     Some routing
 """
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, current_app
 from .core import redis
+from pykafka import KafkaClient
+import json
+from functools import wraps
 
 bp = Blueprint('views', __name__)
+
+
+def send_to_kafka(topic):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            if 'KAFKA_URI' in current_app.config:
+                kafka = KafkaClient(current_app.config['KAFKA_URI'])
+                producer = kafka.topics.get(topic).get_producer()
+                producer.produce(json.dumps(request.args))
+
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def _get_brand_key(request):
@@ -43,7 +60,9 @@ def index():
 
 
 @bp.route('/log', methods=['POST'])
+@send_to_kafka('page_views')
 def log_event():
+
     # increment user view count
     redis.incr(request.args['user_id'])
 
@@ -55,6 +74,7 @@ def log_event():
     return jsonify(dict(success=True))
 
 
+@send_to_kafka('conversions')
 @bp.route('/conversion', methods=['POST'])
 def log_conversion_event():
     conversion_key = _get_conversion_key(request)
@@ -65,6 +85,7 @@ def log_conversion_event():
     return jsonify(dict(success=True))
 
 
+@send_to_kafka('impressions')
 @bp.route('/show', methods=['GET'])
 def show_():
     user_id = request.args['user_id']

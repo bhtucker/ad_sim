@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-    overholt.factory
+    receiver.factory
     ~~~~~~~~~~~~~~~~
-    overholt factory module
+    receiver factory module
 """
 
 from flask import Flask
@@ -13,7 +13,7 @@ from .core import redis
 
 def create_app(package_name, package_path, settings_override=None):
     """Returns a :class:`Flask` application instance configured with common
-    functionality for the Overholt platform.
+    functionality for the Receiver app.
     :param package_name: application package name
     :param package_path: application package path
     :param settings_override: a dictionary of settings to override
@@ -28,7 +28,6 @@ def create_app(package_name, package_path, settings_override=None):
     handler = logging.FileHandler('access.log')
     logger.addHandler(handler)
     app.logger.addHandler(handler)
-
     redis.init_app(app)
 
     register_blueprints(app, package_name, package_path)
