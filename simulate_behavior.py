@@ -102,9 +102,7 @@ def _experience_product(product_viewed, user_id,
     """
 
     event = dict(user_id=user_id, timestamp=time_, **product_viewed)
-    r = requests.post(receiver_url + '/log', params=event)
-    time.sleep(.01)
-    r = requests.get(receiver_url + '/show', params=event)
+    r = requests.get(receiver_url + '/log', params=event)
     if r.json().get('show'):
         population_prefs = _receive_ad(population_prefs, user_id, event['brand'])
     return population_prefs, event
@@ -133,7 +131,7 @@ def main():
             product_viewed, user_id, receiver_url, time_, population_prefs)
 
         if np.random.uniform(0, 1) > .9:
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             population_prefs, purchase = _consider_purchase(
                 product_viewed, population_prefs, user_id)
             if purchase:

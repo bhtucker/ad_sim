@@ -8,7 +8,7 @@
 from flask import Flask
 import logging
 from .helpers import register_blueprints
-from .core import redis
+from .core import redis, kafka
 
 
 def create_app(package_name, package_path, settings_override=None):
@@ -29,6 +29,7 @@ def create_app(package_name, package_path, settings_override=None):
     logger.addHandler(handler)
     app.logger.addHandler(handler)
     redis.init_app(app)
+    kafka.init_app(app)
 
     register_blueprints(app, package_name, package_path)
 
